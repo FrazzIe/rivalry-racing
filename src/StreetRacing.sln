@@ -7,6 +7,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreetRacing.Client", "Stre
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StreetRacing.Server", "StreetRacing.Server\StreetRacing.Server.csproj", "{17C2BE88-96DF-4074-B3BE-FBFB356C00D0}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D016DED1-16DB-4700-A94A-876F6F784EBF}"
+	ProjectSection(SolutionItems) = preProject
+		..\rivalry-racing\__resource.lua = ..\rivalry-racing\__resource.lua
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
