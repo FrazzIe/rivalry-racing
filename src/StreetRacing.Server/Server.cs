@@ -76,7 +76,8 @@ namespace StreetRacing.Server
 
                         _player.TriggerEvent("chat:addMessage", messageObject);
                     }
-                } else
+                }
+                else
                 {
                     messageObject.args[1] = player.Name + " came in " + race.Placements.Count + "!";
 
@@ -98,6 +99,11 @@ namespace StreetRacing.Server
                 players.Remove(player.Handle);
                 player.TriggerEvent("Race.Sync", JsonConvert.SerializeObject(null));
 
+
+                if (race.Participants.Count == 0)
+                {
+                    races.Remove(raceId);
+                }
             }
         }
         [EventHandler("playerDropped")]
@@ -185,7 +191,6 @@ namespace StreetRacing.Server
                         Player _player = Players[int.Parse(playerRace.Placements[i])];
 
                         _player.TriggerEvent("chat:addMessage", messageObject);
-                        _player.TriggerEvent("Race.Sync", raceJson);
                     }
 
                     players.Remove(player.Handle);
@@ -242,7 +247,7 @@ namespace StreetRacing.Server
                                 messageObject.args[1] = "You are already in someone elses race!";
                                 player.TriggerEvent("chat:addMessage", messageObject);
                             }
-                        } else if(race.Placements.Count >= race.Participants.Count)
+                        } else if(race.Participants.Count == 0)
                         {
                             races.Remove(player.Handle);
                             messageObject.args[1] = "Try again!";
@@ -330,6 +335,13 @@ namespace StreetRacing.Server
 
                                         _player.TriggerEvent("chat:addMessage", messageObject);
                                         _player.TriggerEvent("Race.Sync", raceJson);
+                                    }
+
+                                    for (int i = 0; i < playerRace.Placements.Count; i++)
+                                    {
+                                        Player _player = Players[int.Parse(playerRace.Placements[i])];
+
+                                        _player.TriggerEvent("chat:addMessage", messageObject);
                                     }
 
                                     players.Remove(player.Handle);
