@@ -12,6 +12,9 @@ namespace StreetRacing.Server
 {
     public class Server : BaseScript
     {
+        SortedList<string, string> players = new SortedList<string, string>();
+        SortedList<string, Race> races = new SortedList<string, Race>();
+
         public Server()
         {
 
