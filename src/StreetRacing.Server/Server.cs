@@ -47,6 +47,39 @@ namespace StreetRacing.Server
                 switch (args[0])
                 {
                     case "create":
+                        if (race == null)
+                        {
+                            if (raceId == null)
+                            {
+                                int bet = 0;
+                                int.TryParse(args.Length > 1 ? args[1] : "0", out bet);
+
+                                race = new Race(player.Handle, bet);
+                                races.Add(player.Handle, race);
+                                players.Add(player.Handle, player.Handle);
+
+                                player.TriggerEvent("Race.Sync", JsonConvert.SerializeObject(race));
+
+                                messageObject.args[1] = string.Format("Race ^*^3{0} created, share your code with the participants!", player.Handle);
+                                player.TriggerEvent("chat:addMessage", messageObject);
+
+                                Debug.WriteLine("Created race {0}", player.Handle);
+                            }
+                            else
+                            {
+                                messageObject.args[1] = "You are already in someone elses race!";
+                                player.TriggerEvent("chat:addMessage", messageObject);
+                            }
+                        } else if(race.Placements.Count >= race.Participants.Count)
+                        {
+                            races.Remove(player.Handle);
+                            messageObject.args[1] = "Try again!";
+                            player.TriggerEvent("chat:addMessage", messageObject);
+                        } else
+                        {
+                            messageObject.args[1] = "You already created a race!";
+                            player.TriggerEvent("chat:addMessage", messageObject);
+                        }
                         break;
                     case "start":
                         break;
