@@ -24,6 +24,10 @@ namespace StreetRacing.Client
             if (race != null)
             {
             }
+        [EventHandler("Race.Sync")]
+        private void SyncRace(string _race)
+        {
+            race = JsonConvert.DeserializeObject<Race>(_race);
         }
     }
 }
