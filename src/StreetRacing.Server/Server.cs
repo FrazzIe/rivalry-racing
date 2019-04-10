@@ -18,6 +18,7 @@ namespace StreetRacing.Server
         public Server()
         {
 
+        }
         [EventHandler("Race.Setup")]
         private void SetupRace([FromSource] Player player, Vector3 start, Vector3 end)
         {
@@ -39,6 +40,65 @@ namespace StreetRacing.Server
             }
 
         }
+        [EventHandler("Race.End")]
+        private void EndRace([FromSource] Player player, string raceId)
+        {
+            if (races.ContainsKey(raceId))
+            {
+                var messageObject = new
+                {
+                    color = new[] { 255, 0, 0 },
+                    multiline = true,
+                    args = new[] { "Race", "" },
+                };
+
+                Race race = races[raceId];
+
+                race.Placements.Add(player.Handle);
+                race.Participants.Remove(player.Handle);
+
+                if (!race.Finished)
+                {
+                    race.Finished = true;
+
+                    messageObject.args[1] = player.Name + " won the race!";
+
+                    for (int i = 0; i < race.Participants.Count; i++)
+                    {
+                        Player _player = Players[int.Parse(race.Participants[i])];
+
+                        _player.TriggerEvent("chat:addMessage", messageObject);
+                    }
+
+                    for (int i = 0; i < race.Placements.Count; i++)
+                    {
+                        Player _player = Players[int.Parse(race.Placements[i])];
+
+                        _player.TriggerEvent("chat:addMessage", messageObject);
+                    }
+                } else
+                {
+                    messageObject.args[1] = player.Name + " came in " + race.Placements.Count + "!";
+
+                    for (int i = 0; i < race.Participants.Count; i++)
+                    {
+                        Player _player = Players[int.Parse(race.Participants[i])];
+
+                        _player.TriggerEvent("chat:addMessage", messageObject);
+                    }
+
+                    for (int i = 0; i < race.Placements.Count; i++)
+                    {
+                        Player _player = Players[int.Parse(race.Placements[i])];
+
+                        _player.TriggerEvent("chat:addMessage", messageObject);
+                    }
+                }
+
+                players.Remove(player.Handle);
+                player.TriggerEvent("Race.Sync", JsonConvert.SerializeObject(null));
+
+            }
         }
         [EventHandler("playerDropped")]
         private void OnPlayerDropped([FromSource] Player player)
