@@ -18,6 +18,27 @@ namespace StreetRacing.Server
         public Server()
         {
 
+        [EventHandler("Race.Setup")]
+        private void SetupRace([FromSource] Player player, Vector3 start, Vector3 end)
+        {
+            if (races.ContainsKey(player.Handle))
+            {
+                Race race = races[player.Handle];
+
+                race.StartPoint = start;
+                race.EndPoint = end;
+
+                string raceJson = JsonConvert.SerializeObject(race);
+
+                for (int i = 0; i < race.Participants.Count; i++)
+                {
+                    Player _player = Players[int.Parse(race.Participants[i])];
+
+                    _player.TriggerEvent("Race.Sync", raceJson);
+                }
+            }
+
+        }
         }
         [EventHandler("playerDropped")]
         private void OnPlayerDropped([FromSource] Player player)
