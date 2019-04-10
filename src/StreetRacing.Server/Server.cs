@@ -196,6 +196,27 @@ namespace StreetRacing.Server
                     case "start":
                         break;
                     case "join":
+                        if (args.Length > 1)
+                        {
+                            if (race == null && raceId == null)
+                            {
+                                if(races.ContainsKey(args[1]))
+                                {
+                                    Race playerRace = races[args[1]];
+                                    players.Add(player.Handle, args[1]);
+                                    playerRace.Participants.Add(player.Handle);
+                                    player.TriggerEvent("Race.Sync", JsonConvert.SerializeObject(race));
+                                }
+                            } else
+                            {
+                                messageObject.args[1] = "You are already in a race!";
+                                player.TriggerEvent("chat:addMessage", messageObject);
+                            }
+                        } else
+                        {
+                            messageObject.args[1] = "/race join [id]!";
+                            player.TriggerEvent("chat:addMessage", messageObject);
+                        }
                         break;
                     case "leave":
                         if (race == null)
