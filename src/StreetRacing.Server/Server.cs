@@ -194,6 +194,37 @@ namespace StreetRacing.Server
                         }
                         break;
                     case "start":
+                        if(race != null && raceId != null)
+                        {
+                            if (race.Participants.Count > 1)
+                            {
+                                if (race.Ready())
+                                {
+                                    string raceJson = JsonConvert.SerializeObject(race);
+
+                                    for (int i = 0; i < race.Participants.Count; i++)
+                                    {
+                                        Player _player = Players[int.Parse(race.Participants[i])];
+
+                                        Debug.WriteLine("Starting race for player {0}", race.Participants[i]);
+
+                                        _player.TriggerEvent("Race.Start", raceJson);
+                                    }
+                                } else
+                                {
+                                    messageObject.args[1] = "The host needs to pick a finish line!";
+                                    player.TriggerEvent("chat:addMessage", messageObject);
+                                }
+                            } else
+                            {
+                                messageObject.args[1] = "Not enough participants!";
+                                player.TriggerEvent("chat:addMessage", messageObject);
+                            }
+                        } else
+                        {
+                            messageObject.args[1] = "You need to be the creator of a race to use this!";
+                            player.TriggerEvent("chat:addMessage", messageObject);
+                        }
                         break;
                     case "join":
                         if (args.Length > 1)
