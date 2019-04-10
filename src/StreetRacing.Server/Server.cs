@@ -23,16 +23,25 @@ namespace StreetRacing.Server
         private void OnRaceCommand([FromSource] Player player, string[] args)
         {
             Race race = null;
+            string raceId = null;
+
             if (races.ContainsKey(player.Handle))
             {
                 race = races[player.Handle];
             }
+
+            if(players.ContainsKey(player.Handle))
+            {
+                raceId = players[player.Handle];
+            }
+
             var messageObject = new
             {
                 color = new[] { 255, 0, 0 },
                 multiline = true,
                 args = new[] { "Race", "" },
             };
+
             if (args.Length > 0) {
                 switch (args[0])
                 {
