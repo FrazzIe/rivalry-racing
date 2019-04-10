@@ -19,6 +19,97 @@ namespace StreetRacing.Server
         {
 
         }
+        [EventHandler("playerDropped")]
+        private void OnPlayerDropped([FromSource] Player player)
+        {
+            var messageObject = new
+            {
+                color = new[] { 255, 0, 0 },
+                multiline = true,
+                args = new[] { "Race", "" },
+            };
+
+            if (races.ContainsKey(player.Handle))
+            {
+                Race race = races[player.Handle];
+
+                messageObject.args[1] = string.Format("Race ^*^1{0} ^r^0was disolved by the creator!", player.Handle);
+
+                string raceJson = JsonConvert.SerializeObject(null);
+
+                if (!race.Started)
+                {
+                    for (int i = 0; i < race.Participants.Count; i++)
+                    {
+                        Player _player = Players[int.Parse(race.Participants[i])];
+
+                        players.Remove(race.Participants[i]);
+
+                        _player.TriggerEvent("chat:addMessage", messageObject);
+                        _player.TriggerEvent("Race.Sync", raceJson);
+                    }
+
+                    races.Remove(player.Handle);
+                }
+                else
+                {
+                    for (int i = 0; i < race.Participants.Count; i++)
+                    {
+                        Player _player = Players[int.Parse(race.Participants[i])];
+
+                        players.Remove(race.Participants[i]);
+
+                        _player.TriggerEvent("chat:addMessage", messageObject);
+                        _player.TriggerEvent("Race.Sync", raceJson);
+                    }
+
+                    for (int i = 0; i < race.Placements.Count; i++)
+                    {
+                        Player _player = Players[int.Parse(race.Placements[i])];
+
+                        players.Remove(race.Placements[i]);
+
+                        _player.TriggerEvent("chat:addMessage", messageObject);
+                        _player.TriggerEvent("Race.Sync", raceJson);
+                    }
+
+                    races.Remove(player.Handle);
+                }
+            }
+
+            if (players.ContainsKey(player.Handle))
+            {
+                string raceId = players[player.Handle];
+
+                if (races.ContainsKey(raceId))
+                {
+                    Race playerRace = races[raceId];
+
+                    playerRace.Participants.Remove(raceId);
+
+                    string raceJson = JsonConvert.SerializeObject(playerRace);
+
+                    messageObject.args[1] = string.Format("Racer ^*^1{0} ^r^0left the race!", player.Handle);
+
+                    for (int i = 0; i < playerRace.Participants.Count; i++)
+                    {
+                        Player _player = Players[int.Parse(playerRace.Participants[i])];
+
+                        _player.TriggerEvent("chat:addMessage", messageObject);
+                        _player.TriggerEvent("Race.Sync", raceJson);
+                    }
+
+                    for (int i = 0; i < playerRace.Placements.Count; i++)
+                    {
+                        Player _player = Players[int.Parse(playerRace.Placements[i])];
+
+                        _player.TriggerEvent("chat:addMessage", messageObject);
+                        _player.TriggerEvent("Race.Sync", raceJson);
+                    }
+
+                    players.Remove(player.Handle);
+                }
+            }
         }
         [Command("race")]
         private void OnRaceCommand([FromSource] Player player, string[] args)
