@@ -19,6 +19,7 @@ namespace StreetRacing.Server
         {
 
         }
+        }
         [Command("race")]
         private void OnRaceCommand([FromSource] Player player, string[] args)
         {
