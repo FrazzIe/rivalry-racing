@@ -15,6 +15,7 @@ namespace StreetRacing.Shared
         private string id;
         [JsonProperty]
         private int bet;
+        [JsonProperty]
         private Vector3 start;
         [JsonProperty]
         private Vector3 end;
