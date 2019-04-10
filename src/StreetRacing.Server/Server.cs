@@ -85,17 +85,90 @@ namespace StreetRacing.Server
                         break;
                     case "join":
                         break;
-                    case "cancel":
-                        break;
                     case "leave":
+                        if (race == null)
+                        {
+                            if (raceId != null)
+                            {
+                                if (races.ContainsKey(raceId))
+                                {
+                                    Race playerRace = races[raceId];
+
+                                    playerRace.Participants.Remove(raceId);
+
+                                    string raceJson = JsonConvert.SerializeObject(playerRace);
+
+                                    messageObject.args[1] = string.Format("Racer ^*^1{0} ^r^0left the race!", player.Handle);
+
+                                    for (int i = 0; i < playerRace.Participants.Count; i++)
+                                    {
+                                        Player _player = Players[int.Parse(playerRace.Participants[i])];
+
+                                        _player.TriggerEvent("chat:addMessage", messageObject);
+                                        _player.TriggerEvent("Race.Sync", raceJson);
+                                    }
+
+                                    players.Remove(player.Handle);
+                                }
+                            }
+                            else
+                            {
+                                messageObject.args[1] = "You aren't in a race!";
+                                player.TriggerEvent("chat:addMessage", messageObject);
+                            }
+                        } else
+                        {
+                            messageObject.args[1] = string.Format("Race ^*^1{0} ^r^0was disolved by the creator!", player.Handle);
+
+                            string raceJson = JsonConvert.SerializeObject(null);
+
+                            if (!race.Started)
+                            {
+                                for (int i = 0; i < race.Participants.Count; i++)
+                                {
+                                    Player _player = Players[int.Parse(race.Participants[i])];
+
+                                    players.Remove(race.Participants[i]);
+
+                                    _player.TriggerEvent("chat:addMessage", messageObject);
+                                    _player.TriggerEvent("Race.Sync", raceJson);
+                                }
+
+                                races.Remove(player.Handle);
+                            } else
+                            {
+                                for (int i = 0; i < race.Participants.Count; i++)
+                                {
+                                    Player _player = Players[int.Parse(race.Participants[i])];
+
+                                    players.Remove(race.Participants[i]);
+
+                                    _player.TriggerEvent("chat:addMessage", messageObject);
+                                    _player.TriggerEvent("Race.Sync", raceJson);
+                                }
+
+                                for (int i = 0; i < race.Placements.Count; i++)
+                                {
+                                    Player _player = Players[int.Parse(race.Placements[i])];
+
+                                    players.Remove(race.Placements[i]);
+
+                                    _player.TriggerEvent("chat:addMessage", messageObject);
+                                    _player.TriggerEvent("Race.Sync", raceJson);
+                                }
+
+                                races.Remove(player.Handle);
+                            }
+                        }
                         break;
                     default:
-                        messageObject.args[1] = "Invalid syntax: ^*^1create^r^0, ^*^1start, ^*^1join, ^*^1cancel ^r^0or ^*^1leave ^r^0are the only accepted arguments!!";
+                        messageObject.args[1] = "Invalid syntax: ^*^1create^r^0, ^*^1start, ^*^1join, ^r^0or ^*^1leave ^r^0are the only accepted arguments!!";
                         player.TriggerEvent("chat:addMessage", messageObject);
                         break;
+                }
             } else
             {
-                messageObject.args[1] = "Invalid syntax: ^*^1create^r^0, ^*^1start, ^*^1join, ^*^1cancel ^r^0or ^*^1leave ^r^0are the only accepted arguments!!";
+                messageObject.args[1] = "Invalid syntax: ^*^1create^r^0, ^*^1start, ^*^1join, ^r^0or ^*^1leave ^r^0are the only accepted arguments!!";
                 player.TriggerEvent("chat:addMessage", messageObject);
             }
         }
