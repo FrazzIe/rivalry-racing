@@ -79,7 +79,36 @@ namespace StreetRacing.Client
                 }
             }
         }
+        [EventHandler("Race.Start")]
+        private async void StartRace(string _race)
+        {
+            race = JsonConvert.DeserializeObject<Race>(_race);
+
+            int count = 3;
+
+            while(count != 0)
+            {
+                TriggerEvent("chat:addMessage", new
+                {
+                    color = new[] { 255, 0, 0 },
+                    multiline = true,
+                    args = new[] { "Race", count.ToString() },
+                });
+
+                await Delay(1000);
+
+                count--;
             }
+
+            TriggerEvent("chat:addMessage", new
+            {
+                color = new[] { 255, 0, 0 },
+                multiline = true,
+                args = new[] { "Race", "Go!" },
+            });
+
+            race.Started = true;
+        }
         [EventHandler("Race.Sync")]
         private void SyncRace(string _race)
         {
