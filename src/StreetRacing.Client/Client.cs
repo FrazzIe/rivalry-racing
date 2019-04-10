@@ -12,9 +12,18 @@ namespace StreetRacing.Client
 {
     public class Client : BaseScript
     {
+        Race race;
+
         public Client()
         {
 
+        }
+        [Tick]
+        private async Task RaceWatcher()
+        {
+            if (race != null)
+            {
+            }
         }
     }
 }
