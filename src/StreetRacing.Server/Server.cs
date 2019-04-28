@@ -589,7 +589,7 @@ namespace StreetRacing.Server
 
                                 string[] info = new string[] {
                                     "Code: ^3" + playerRace.ID,
-                                    "Passworded: ^*" + (playerRace.Password == "" ? "^1Yes" : "^2No"),
+                                    "Passworded: ^*" + (playerRace.Password != "" ? "^1Yes" : "^2No"),
                                     "Buy in: ^2$^0^*" + playerRace.Bet,
                                     "Pot: ^2$^0^*" + playerRace.Pot,
                                     "Racers: ^3^*" + (playerRace.Participants.Count + playerRace.Placements.Count),
