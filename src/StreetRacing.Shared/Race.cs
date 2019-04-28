@@ -16,6 +16,10 @@ namespace StreetRacing.Shared
         [JsonProperty]
         private int bet;
         [JsonProperty]
+        private string password;
+        [JsonProperty]
+        private int pot;
+        [JsonProperty]
         private Vector3 start;
         [JsonProperty]
         private Vector3 end;
@@ -24,10 +28,12 @@ namespace StreetRacing.Shared
         [JsonProperty]
         private List<string> placements;
 
-        public Race(string _id, int _bet)
+        public Race(string _id, int _bet, string _password)
         {
             id = _id;
             bet = _bet;
+            password = _password;
+            pot = _bet;
             start = Vector3.Zero;
             end = Vector3.Zero;
 
@@ -39,6 +45,8 @@ namespace StreetRacing.Shared
 
         public string ID { get => id; }
         public int Bet { get => bet; }
+        public string Password { get => password; }
+        public int Pot { get => pot; set => pot += value; }
         public Vector3 StartPoint { get => start; set => start = value; }
         public Vector3 EndPoint { get => end; set => end = value; }
         public List<string> Participants { get => participants; }
@@ -49,5 +57,6 @@ namespace StreetRacing.Shared
         }
         public bool Started { get; set; }
         public bool Finished { get; set; }
+        public bool Locked { get; set; }
     }
 }

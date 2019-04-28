@@ -14,11 +14,46 @@ namespace StreetRacing.Server
     {
         SortedList<string, string> players = new SortedList<string, string>();
         SortedList<string, Race> races = new SortedList<string, Race>();
+        string[] commandHelp = new[] {
+            "^*^3/race ^4create^0^r [bet amount (optional)] [password (optional)]",
+            "^*^3/race ^4start^0^r -> starts a race",
+            "^*^3/race ^4join^0^r [race id] [race password (optional)]",
+            "^*^3/race ^4lock^0^r -> prevent people from joining a race (toggle)",
+            "^*^3/race ^4leave^0^r -> disband your race or leave a race that you joined",
+            "^*^3/race ^4info^0^r -> displays information about a race",
+        };
 
         public Server()
         {
 
         }
+
+        public static string GetOrdinal(int num)
+        {
+            if (num <= 0) return num.ToString();
+
+            switch (num % 100)
+            {
+                case 11:
+                case 12:
+                case 13:
+                    return "th";
+            }
+
+            switch (num % 10)
+            {
+                case 1:
+                    return "st";
+                case 2:
+                    return "nd";
+                case 3:
+                    return "rd";
+                default:
+                    return "th";
+            }
+
+        }
+
         [EventHandler("Race.Setup")]
         private void SetupRace([FromSource] Player player, Vector3 start, Vector3 end)
         {
@@ -53,6 +88,7 @@ namespace StreetRacing.Server
                 };
 
                 Race race = races[raceId];
+                dynamic name = Exports["core"].GetCharacterName(player.Handle);
 
                 race.Placements.Add(player.Handle);
                 race.Participants.Remove(player.Handle);
@@ -61,7 +97,7 @@ namespace StreetRacing.Server
                 {
                     race.Finished = true;
 
-                    messageObject.args[1] = player.Name + " won the race!";
+                    messageObject.args[1] = string.Format("^*^3{0}^r^0 won the race!", name);
 
                     for (int i = 0; i < race.Participants.Count; i++)
                     {
@@ -76,10 +112,19 @@ namespace StreetRacing.Server
 
                         _player.TriggerEvent("chat:addMessage", messageObject);
                     }
+
+                    if (race.Bet > 0)
+                    {
+                        Exports["core"].AddPlayerCash(player.Handle, race.Pot);
+
+                        messageObject.args[1] = string.Format("You got ^*^2$^0{0}^r^0 for winning", race.Pot);
+
+                        player.TriggerEvent("chat:addMessage", messageObject);
+                    }
                 }
                 else
                 {
-                    messageObject.args[1] = player.Name + " came in " + race.Placements.Count + "!";
+                    messageObject.args[1] = string.Format("^*^3{0}^r^0 came in ^*^1{1}^0{2}!", name, race.Placements.Count, GetOrdinal(race.Placements.Count));
 
                     for (int i = 0; i < race.Participants.Count; i++)
                     {
@@ -97,11 +142,19 @@ namespace StreetRacing.Server
                 }
 
                 players.Remove(player.Handle);
-                player.TriggerEvent("Race.Sync", JsonConvert.SerializeObject(null));
-
+                player.TriggerEvent("Race.Reset");
 
                 if (race.Participants.Count == 0)
                 {
+                    messageObject.args[1] = string.Format("Race ^*^1{0} ^r^0has concluded", raceId);
+
+                    for (int i = 0; i < race.Placements.Count; i++)
+                    {
+                        Player _player = Players[int.Parse(race.Placements[i])];
+
+                        _player.TriggerEvent("chat:addMessage", messageObject);
+                    }
+
                     races.Remove(raceId);
                 }
             }
@@ -122,8 +175,6 @@ namespace StreetRacing.Server
 
                 messageObject.args[1] = string.Format("Race ^*^1{0} ^r^0was disolved by the creator!", player.Handle);
 
-                string raceJson = JsonConvert.SerializeObject(null);
-
                 if (!race.Started)
                 {
                     for (int i = 0; i < race.Participants.Count; i++)
@@ -132,32 +183,38 @@ namespace StreetRacing.Server
 
                         players.Remove(race.Participants[i]);
 
+                        Exports["core"].AddPlayerCash(_player.Handle, race.Bet);
+
                         _player.TriggerEvent("chat:addMessage", messageObject);
-                        _player.TriggerEvent("Race.Sync", raceJson);
+                        _player.TriggerEvent("Race.Reset");
                     }
 
                     races.Remove(player.Handle);
                 }
                 else
                 {
+                    bool finished = race.Finished;
+
                     for (int i = 0; i < race.Participants.Count; i++)
                     {
                         Player _player = Players[int.Parse(race.Participants[i])];
 
                         players.Remove(race.Participants[i]);
 
+                        if (!finished)
+                        {
+                            Exports["core"].AddPlayerCash(_player.Handle, race.Bet);
+                        }
+
                         _player.TriggerEvent("chat:addMessage", messageObject);
-                        _player.TriggerEvent("Race.Sync", raceJson);
+                        _player.TriggerEvent("Race.Reset");
                     }
 
                     for (int i = 0; i < race.Placements.Count; i++)
                     {
                         Player _player = Players[int.Parse(race.Placements[i])];
 
-                        players.Remove(race.Placements[i]);
-
                         _player.TriggerEvent("chat:addMessage", messageObject);
-                        _player.TriggerEvent("Race.Sync", raceJson);
                     }
 
                     races.Remove(player.Handle);
@@ -171,19 +228,19 @@ namespace StreetRacing.Server
                 if (races.ContainsKey(raceId))
                 {
                     Race playerRace = races[raceId];
+                    dynamic name = Exports["core"].GetCharacterName(player.Handle);
+
+                    if (name == null) name = "Someone";
 
                     playerRace.Participants.Remove(raceId);
 
-                    string raceJson = JsonConvert.SerializeObject(playerRace);
-
-                    messageObject.args[1] = string.Format("Racer ^*^1{0} ^r^0left the race!", player.Handle);
+                    messageObject.args[1] = string.Format("^*^3{0} ^r^0left the race!", name);
 
                     for (int i = 0; i < playerRace.Participants.Count; i++)
                     {
                         Player _player = Players[int.Parse(playerRace.Participants[i])];
 
                         _player.TriggerEvent("chat:addMessage", messageObject);
-                        _player.TriggerEvent("Race.Sync", raceJson);
                     }
 
                     for (int i = 0; i < playerRace.Placements.Count; i++)
@@ -194,6 +251,19 @@ namespace StreetRacing.Server
                     }
 
                     players.Remove(player.Handle);
+
+                    if (playerRace.Participants.Count == 0)
+                    {
+                        messageObject.args[1] = string.Format("Race ^*^1{0} ^r^0has concluded", raceId);
+                        for (int i = 0; i < playerRace.Placements.Count; i++)
+                        {
+                            Player _player = Players[int.Parse(playerRace.Placements[i])];
+
+                            _player.TriggerEvent("chat:addMessage", messageObject);
+                        }
+
+                        races.Remove(raceId);
+                    }
                 }
             }
         }
@@ -202,6 +272,7 @@ namespace StreetRacing.Server
         {
             Race race = null;
             string raceId = null;
+            dynamic playerCash = Exports["core"].GetPlayerCash(player.Handle);
 
             if (races.ContainsKey(player.Handle))
             {
@@ -212,6 +283,8 @@ namespace StreetRacing.Server
             {
                 raceId = players[player.Handle];
             }
+
+            if (playerCash == null) playerCash = 0;
 
             var messageObject = new
             {
@@ -230,24 +303,40 @@ namespace StreetRacing.Server
                             {
                                 int bet = 0;
                                 int.TryParse(args.Length > 1 ? args[1] : "0", out bet);
+                                string password = args.Length > 2 ? args[2] : "";
 
-                                race = new Race(player.Handle, bet);
-                                races.Add(player.Handle, race);
-                                players.Add(player.Handle, player.Handle);
+                                if (playerCash >= bet)
+                                {
+                                    if (bet > 0)
+                                    {
+                                        Exports["core"].RemovePlayerCash(player.Handle, bet);
+                                    } else if (bet < 0)
+                                    {
+                                        bet = 0;
+                                    }
 
-                                player.TriggerEvent("Race.Sync", JsonConvert.SerializeObject(race));
+                                    race = new Race(player.Handle, bet, password);
+                                    races.Add(player.Handle, race);
+                                    players.Add(player.Handle, player.Handle);
 
-                                messageObject.args[1] = string.Format("Race ^*^3{0} created, share your code with the participants!", player.Handle);
-                                player.TriggerEvent("chat:addMessage", messageObject);
+                                    player.TriggerEvent("Race.Sync", JsonConvert.SerializeObject(race));
 
-                                Debug.WriteLine("Created race {0}", player.Handle);
+                                    if (string.IsNullOrEmpty(password)) messageObject.args[1] = string.Format("Successfully created, share your code (^*^3{0}^r^0) with the participants!", player.Handle);
+                                    else messageObject.args[1] = string.Format("Successfully created, share your code (^*^3{0}^r^0) and password (^*^3{1}^r^0) with the participants!", player.Handle, race.Password);
+
+                                    player.TriggerEvent("chat:addMessage", messageObject);
+                                } else
+                                {
+                                    messageObject.args[1] = "You don't have enough money for the bet!";
+                                    player.TriggerEvent("chat:addMessage", messageObject);
+                                }
                             }
                             else
                             {
                                 messageObject.args[1] = "You are already in someone elses race!";
                                 player.TriggerEvent("chat:addMessage", messageObject);
                             }
-                        } else if(race.Participants.Count == 0)
+                        } else if (race.Participants.Count == 0)
                         {
                             races.Remove(player.Handle);
                             messageObject.args[1] = "Try again!";
@@ -259,25 +348,28 @@ namespace StreetRacing.Server
                         }
                         break;
                     case "start":
-                        if(race != null && raceId != null)
+                        if (race != null && raceId != null)
                         {
                             if (race.Participants.Count > 1)
                             {
                                 if (race.Ready())
                                 {
+                                    messageObject.args[1] = "Starting the race!";
+                                    player.TriggerEvent("chat:addMessage", messageObject);
+
                                     string raceJson = JsonConvert.SerializeObject(race);
 
                                     for (int i = 0; i < race.Participants.Count; i++)
                                     {
                                         Player _player = Players[int.Parse(race.Participants[i])];
 
-                                        Debug.WriteLine("Starting race for player {0}", race.Participants[i]);
-
                                         _player.TriggerEvent("Race.Start", raceJson);
                                     }
+
+                                    race.Started = true;
                                 } else
                                 {
-                                    messageObject.args[1] = "The host needs to pick a finish line!";
+                                    messageObject.args[1] = "You need to pick a finish line!";
                                     player.TriggerEvent("chat:addMessage", messageObject);
                                 }
                             } else
@@ -296,12 +388,63 @@ namespace StreetRacing.Server
                         {
                             if (race == null && raceId == null)
                             {
-                                if(races.ContainsKey(args[1]))
+                                if (races.ContainsKey(args[1]))
                                 {
                                     Race playerRace = races[args[1]];
-                                    players.Add(player.Handle, args[1]);
-                                    playerRace.Participants.Add(player.Handle);
-                                    player.TriggerEvent("Race.Sync", JsonConvert.SerializeObject(race));
+                                    string password = args.Length > 2 ? args[2] : "";
+                                    dynamic name = Exports["core"].GetCharacterName(player.Handle);
+
+                                    if (name == null) name = "Someone";
+
+                                    if (playerRace.Password == password) {
+                                        if (!playerRace.Locked)
+                                        {
+                                            if (playerCash >= playerRace.Bet)
+                                            {
+                                                if (playerRace.Bet > 0)
+                                                {
+                                                    Exports["core"].RemovePlayerCash(player.Handle, playerRace.Bet);
+                                                    playerRace.Pot = playerRace.Bet;
+                                                }
+                                                string raceJson = JsonConvert.SerializeObject(playerRace);
+
+                                                messageObject.args[1] = string.Format("^*^3{0}^r^0 joined the race!", name);
+
+                                                for (int i = 0; i < playerRace.Participants.Count; i++)
+                                                {
+                                                    Player _player = Players[int.Parse(playerRace.Participants[i])];
+
+                                                    _player.TriggerEvent("chat:addMessage", messageObject);
+                                                }
+
+                                                for (int i = 0; i < playerRace.Placements.Count; i++)
+                                                {
+                                                    Player _player = Players[int.Parse(playerRace.Placements[i])];
+
+                                                    _player.TriggerEvent("chat:addMessage", messageObject);
+                                                }
+
+                                                players.Add(player.Handle, args[1]);
+                                                playerRace.Participants.Add(player.Handle);
+                                                player.TriggerEvent("Race.Sync", raceJson);
+
+                                                messageObject.args[1] = string.Format("You joined Race ^*^1{0}^r^0!", args[1]);
+                                                player.TriggerEvent("chat:addMessage", messageObject);
+                                            } else
+                                            {
+                                                messageObject.args[1] = string.Format("You need at least ^*^2$^0{0}^r to join this race!", playerRace.Bet);
+                                                player.TriggerEvent("chat:addMessage", messageObject);
+                                            }
+                                        } else
+                                        {
+                                            messageObject.args[1] = "The race has stopped accepting participants!";
+                                            player.TriggerEvent("chat:addMessage", messageObject);
+                                        }
+                                    } else
+                                    {
+                                        messageObject.args[1] = string.Format("You entered the wrong password!", args[1]);
+                                        player.TriggerEvent("chat:addMessage", messageObject);
+                                    }
                                 }
                             } else
                             {
@@ -314,6 +457,21 @@ namespace StreetRacing.Server
                             player.TriggerEvent("chat:addMessage", messageObject);
                         }
                         break;
+                    case "lock":
+                        if (race != null)
+                        {
+                            race.Locked = !race.Locked;
+
+                            if (race.Locked) messageObject.args[1] = string.Format("Race ^*^1{0} ^r^0has now been ^*^1locked^r^0, no one will be able to join!", player.Handle);
+                            else messageObject.args[1] = string.Format("Race ^*^1{0} ^r^0has now been ^*^2unlocked^r^0, people will be able to join!", player.Handle);
+
+                            player.TriggerEvent("chat:addMessage", messageObject);
+                        } else
+                        {
+                            messageObject.args[1] = "You aren't in a race!";
+                            player.TriggerEvent("chat:addMessage", messageObject);
+                        }
+                        break;
                     case "leave":
                         if (race == null)
                         {
@@ -322,19 +480,22 @@ namespace StreetRacing.Server
                                 if (races.ContainsKey(raceId))
                                 {
                                     Race playerRace = races[raceId];
+                                    dynamic name = Exports["core"].GetCharacterName(player.Handle);
 
-                                    playerRace.Participants.Remove(raceId);
+                                    if (name == null) name = "Someone";
 
-                                    string raceJson = JsonConvert.SerializeObject(playerRace);
+                                    playerRace.Participants.Remove(player.Handle);
 
-                                    messageObject.args[1] = string.Format("Racer ^*^1{0} ^r^0left the race!", player.Handle);
+                                    messageObject.args[1] = "You left the race!";
+                                    player.TriggerEvent("chat:addMessage", messageObject);
+
+                                    messageObject.args[1] = string.Format("^*^3{0} ^r^0left the race!", name);
 
                                     for (int i = 0; i < playerRace.Participants.Count; i++)
                                     {
                                         Player _player = Players[int.Parse(playerRace.Participants[i])];
 
                                         _player.TriggerEvent("chat:addMessage", messageObject);
-                                        _player.TriggerEvent("Race.Sync", raceJson);
                                     }
 
                                     for (int i = 0; i < playerRace.Placements.Count; i++)
@@ -345,6 +506,20 @@ namespace StreetRacing.Server
                                     }
 
                                     players.Remove(player.Handle);
+                                    player.TriggerEvent("Race.Reset");
+
+                                    if (playerRace.Participants.Count == 0)
+                                    {
+                                        messageObject.args[1] = string.Format("Race ^*^1{0} ^r^0has concluded", raceId);
+                                        for (int i = 0; i < playerRace.Placements.Count; i++)
+                                        {
+                                            Player _player = Players[int.Parse(playerRace.Placements[i])];
+
+                                            _player.TriggerEvent("chat:addMessage", messageObject);
+                                        }
+
+                                        races.Remove(raceId);
+                                    }
                                 }
                             }
                             else
@@ -356,8 +531,6 @@ namespace StreetRacing.Server
                         {
                             messageObject.args[1] = string.Format("Race ^*^1{0} ^r^0was disolved by the creator!", player.Handle);
 
-                            string raceJson = JsonConvert.SerializeObject(null);
-
                             if (!race.Started)
                             {
                                 for (int i = 0; i < race.Participants.Count; i++)
@@ -366,21 +539,30 @@ namespace StreetRacing.Server
 
                                     players.Remove(race.Participants[i]);
 
+                                    Exports["core"].AddPlayerCash(_player.Handle, race.Bet);
+
                                     _player.TriggerEvent("chat:addMessage", messageObject);
-                                    _player.TriggerEvent("Race.Sync", raceJson);
+                                    _player.TriggerEvent("Race.Reset");
                                 }
 
                                 races.Remove(player.Handle);
                             } else
                             {
+                                bool finished = race.Finished;
+
                                 for (int i = 0; i < race.Participants.Count; i++)
                                 {
                                     Player _player = Players[int.Parse(race.Participants[i])];
 
                                     players.Remove(race.Participants[i]);
 
+                                    if(!finished)
+                                    {
+                                        Exports["core"].AddPlayerCash(_player.Handle, race.Bet);
+                                    }
+
                                     _player.TriggerEvent("chat:addMessage", messageObject);
-                                    _player.TriggerEvent("Race.Sync", raceJson);
+                                    _player.TriggerEvent("Race.Reset");
                                 }
 
                                 for (int i = 0; i < race.Placements.Count; i++)
@@ -390,22 +572,63 @@ namespace StreetRacing.Server
                                     players.Remove(race.Placements[i]);
 
                                     _player.TriggerEvent("chat:addMessage", messageObject);
-                                    _player.TriggerEvent("Race.Sync", raceJson);
                                 }
 
                                 races.Remove(player.Handle);
                             }
                         }
                         break;
+                    case "info":
+                        if (args.Length > 1) {
+                            if (races.ContainsKey(args[1])) {
+                                Race playerRace = races[args[1]];
+                                string name = null;
+
+                                if (playerRace.Finished) name = Exports["core"].GetCharacterName(playerRace.Placements[0]);
+                                if (name == null) name = "Unavailable";
+
+                                string[] info = new string[] {
+                                    "Code: ^3" + playerRace.ID,
+                                    "Passworded: ^*" + (playerRace.Password == "" ? "^1Yes" : "^2No"),
+                                    "Buy in: ^2$^0^*" + playerRace.Bet,
+                                    "Pot: ^2$^0^*" + playerRace.Pot,
+                                    "Racers: ^3^*" + (playerRace.Participants.Count + playerRace.Placements.Count),
+                                    "Open: ^*" + (playerRace.Locked ? "^1No" : "^2Yes"),
+                                    "Started: ^*" + (playerRace.Started ? "^3Yes" : "^3No"),
+                                    "Winner: ^*^3" + name,
+                                };
+
+                                for (int i = 0; i < info.Length; i++)
+                                {
+                                    messageObject.args[1] = info[i];
+                                    player.TriggerEvent("chat:addMessage", messageObject);
+                                }
+                            } else
+                            {
+                                messageObject.args[1] = "A race with this id doesn't not exist!";
+                                player.TriggerEvent("chat:addMessage", messageObject);
+                            }
+                        } else
+                        {
+                            messageObject.args[1] = "/race info [id]!";
+                            player.TriggerEvent("chat:addMessage", messageObject);
+                        }
+                        break;
                     default:
-                        messageObject.args[1] = "Invalid syntax: ^*^1create^r^0, ^*^1start, ^*^1join, ^r^0or ^*^1leave ^r^0are the only accepted arguments!!";
-                        player.TriggerEvent("chat:addMessage", messageObject);
+                        for (int i = 0; i < commandHelp.Length; i++)
+                        {
+                            messageObject.args[1] = commandHelp[i];
+                            player.TriggerEvent("chat:addMessage", messageObject);
+                        }
                         break;
                 }
             } else
             {
-                messageObject.args[1] = "Invalid syntax: ^*^1create^r^0, ^*^1start, ^*^1join, ^r^0or ^*^1leave ^r^0are the only accepted arguments!!";
-                player.TriggerEvent("chat:addMessage", messageObject);
+                for (int i = 0; i < commandHelp.Length; i++)
+                {
+                    messageObject.args[1] = commandHelp[i];
+                    player.TriggerEvent("chat:addMessage", messageObject);
+                }
             }
         }
     }
